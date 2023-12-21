@@ -87,18 +87,6 @@ where
     many1(almanach_mapping()).map(|mapping: Vec<AlmanachMapping>| mapping)
 }
 
-impl AlmanachMapping {
-    fn map(&self, seed: &usize) -> usize {
-        for range in self.0.iter() {
-            if (range.source..range.source + range.length).contains(seed) {
-                let output = range.dest + (seed - range.source);
-                return output;
-            }
-        }
-        *seed
-    }
-}
-
 #[derive(Debug, PartialEq, Eq, Clone, Hash)]
 struct Seed(Range<usize>);
 
@@ -228,16 +216,12 @@ pub fn compute(filename: PathBuf) {
     reader.read_line(&mut seed_line).ok();
     let mut seeds_hashset: HashSet<Seed> =
         HashSet::from_iter(seeds().easy_parse(&seed_line[..]).unwrap().0);
-    // println!("{:?}", seeds_hashset);
-    println!("{:?}", seeds_hashset);
 
     reader.fill_buf().ok();
     let input: &str = std::str::from_utf8(reader.buffer()).unwrap();
     let almanach = almanach().easy_parse(input).unwrap().0;
-    for (i, mapping) in almanach.iter().enumerate() {
-        println!("Processing {}-th page", i);
+    for mapping in almanach.iter() {
         let mut transformed_seeds: HashSet<Seed> = HashSet::new();
-        //let mut previous_seeds = seeds_hashset.into_iter().collect::<Vec<Seed>>();
 
         for almanach_range in mapping.0.iter() {
             let current_seeds: Vec<Seed> = seeds_hashset.clone().into_iter().collect();
@@ -245,7 +229,6 @@ pub fn compute(filename: PathBuf) {
             for s in current_seeds.iter() {
                 seeds_hashset.remove(s);
                 let (new_seed, remainder) = s.convert(almanach_range);
-                //println!("{:?} {:?}", new_seed, remainder);
                 if let Some(new_seed) = new_seed {
                     transformed_seeds.insert(new_seed);
                 }
