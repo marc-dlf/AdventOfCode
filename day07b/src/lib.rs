@@ -19,6 +19,30 @@ pub struct Opts {
     pub input_filename: PathBuf,
 }
 
+#[derive(Eq, PartialEq, Hash)]
+struct JokerCards(cards::card::Value);
+
+impl Ord for JokerCards {
+    fn cmp(&self, other: &Self) -> Ordering {
+        if self.0 == other.0 {
+            return Ordering::Equal;
+        }
+        if self.0 == Value::Jack {
+            return Ordering::Less;
+        }
+        if other.0 == Value::Jack {
+            return Ordering::Greater;
+        }
+        self.0.cmp(&other.0)
+    }
+}
+
+impl PartialOrd for JokerCards {
+    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
+        Some(self.cmp(other))
+    }
+}
+
 #[derive(Hash, Eq, PartialEq, Debug)]
 enum HandType {
     FiveOfAKind,
@@ -82,8 +106,8 @@ impl Hand {
     }
 }
 
-fn convert(c: char) -> cards::card::Value {
-    match c {
+fn convert(c: char) -> JokerCards {
+    JokerCards(match c {
         'A' => Value::Ace,
         'K' => Value::King,
         'Q' => Value::Queen,
@@ -98,16 +122,34 @@ fn convert(c: char) -> cards::card::Value {
         '3' => Value::Three,
         '2' => Value::Two,
         c => unreachable!("Wrong value: {}", c),
-    }
+    })
 }
 
 fn find_hand_type(hand: &str) -> HandType {
     let mut counts: HashMap<Value, u8> = HashMap::new();
     hand.chars().for_each(|c| {
-        let card = convert(c);
+        let card = convert(c).0;
         *counts.entry(card).or_insert(0) += 1;
     });
+    if counts.contains_key(&Value::Jack) {
+        let mut majority: Option<&Value> = None;
+        let mut max_cnt = 0;
+
+        for (card, cnt) in counts.iter() {
+            if (cnt > &max_cnt) && (card != &Value::Jack) {
+                majority = Some(card);
+                max_cnt = *cnt;
+            }
+        }
+
+        if let Some(card) = majority {
+            let n_jacks = *counts.get(&Value::Jack).unwrap();
+            counts.entry(*card).and_modify(|v| *v += n_jacks);
+            counts.remove(&Value::Jack);
+        };
+    }
     let mut counts = counts.into_values().sorted().collect::<Vec<u8>>();
+
     match counts.pop() {
         Some(5) => HandType::FiveOfAKind,
         Some(4) => HandType::FourOfAKind,
@@ -186,7 +228,7 @@ T55J5 684";
                 },
                 Hand {
                     hand: String::from("T55J5"),
-                    hand_type: HandType::ThreeOfAKind,
+                    hand_type: HandType::FourOfAKind, //Joker counted
                     bid: 684
                 }
             ]
@@ -196,16 +238,26 @@ T55J5 684";
 
     #[test]
     fn test_compare_hands() {
-        let one_pair1 = Hand::new(String::from("T9T35"), 1);
+        let one_pair1 = Hand::new(String::from("Q9Q35"), 1);
         let one_pair2 = Hand::new(String::from("2AA46"), 1);
         let full_house = Hand::new(String::from("6AAA6"), 1);
         let three_of_a_kind1 = Hand::new(String::from("T88K8"), 1);
         let three_of_a_kind2 = Hand::new(String::from("Q777K"), 1);
+        let three_of_a_kind_with_joker3 = Hand::new(String::from("J772K"), 1);
+        let five_jokers = Hand::new(String::from("JJJJJ"), 1);
 
-        assert!(one_pair1 > one_pair2);
-        assert!(full_house > one_pair1);
+        //hand types
         assert_eq!(three_of_a_kind1.hand_type, HandType::ThreeOfAKind);
         assert_eq!(three_of_a_kind2.hand_type, HandType::ThreeOfAKind);
+
+        //hand strength
+        assert!(one_pair1 > one_pair2);
+        assert!(full_house > one_pair1);
+        assert!(three_of_a_kind_with_joker3 > one_pair1);
+        assert!(three_of_a_kind_with_joker3 > one_pair2);
+        assert!(full_house > three_of_a_kind_with_joker3);
         assert!(three_of_a_kind2 > three_of_a_kind1);
+        assert!(three_of_a_kind2 > three_of_a_kind_with_joker3);
+        assert!(five_jokers > three_of_a_kind_with_joker3);
     }
 }
