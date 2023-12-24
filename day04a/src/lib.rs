@@ -1,7 +1,5 @@
 use std::collections::HashSet;
 
-use anyhow::Result;
-use combine::parser::byte::num;
 use combine::EasyParser;
 use std::fs::File;
 use std::io::{BufRead, BufReader};

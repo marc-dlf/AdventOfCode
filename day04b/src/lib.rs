@@ -1,8 +1,5 @@
-use std::collections::{HashMap, HashSet};
-
-use anyhow::Result;
-use combine::parser::byte::num;
 use combine::EasyParser;
+use std::collections::HashSet;
 use std::fs::File;
 use std::io::{BufRead, BufReader};
 use std::path::PathBuf;
@@ -27,15 +24,6 @@ struct ScratchCard {
 }
 
 impl ScratchCard {
-    fn result(&self) -> usize {
-        let power = self.count_match().try_into().unwrap();
-        let base: usize = 2;
-        match power {
-            0 => 0,
-            p => base.pow(p - 1),
-        }
-    }
-
     fn count_match(&self) -> usize {
         self.winning_num
             .0

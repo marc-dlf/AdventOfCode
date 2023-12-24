@@ -1,7 +1,6 @@
 use anyhow::Result;
 use clap::Parser;
 use day02::{self, Observations};
-use std::collections::HashMap;
 use std::fs::File;
 use std::io::{BufRead, BufReader};
 

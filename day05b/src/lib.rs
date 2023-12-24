@@ -253,6 +253,7 @@ mod tests {
         50 98 2
         52 50 48";
         let output = almanach_mapping().easy_parse(input).unwrap();
+        println!("{:?}", output);
     }
 
     #[test]
